@@ -10,6 +10,7 @@ void PanelSwitch::init( uint8_t pinNum )
 {
   pinNumber = pinNum;
   pinMode( pinNumber, INPUT_PULLUP );
+  digitalWrite( pinNumber, 1 );  //Might not do anything
   update();
   //force newData high in case knob starts on last value
   newData = 1;
@@ -111,4 +112,22 @@ uint8_t PanelRegister::getState( void )
   return state;
 }
 
+//---LED---------------------------------------------------------
+PanelLed::PanelLed( void )
+{
 
+}
+
+void PanelLed::init( uint8_t pinVariable )
+{
+  pinNumber = pinVariable;
+  digitalWrite( pinNumber, 1 ); //off
+  pinMode( pinNumber, OUTPUT );
+
+}
+
+void PanelLed::setState( uint8_t state )  // Overload with some enum type later
+{
+  state ^= 1;
+  digitalWrite( pinNumber, state );
+}

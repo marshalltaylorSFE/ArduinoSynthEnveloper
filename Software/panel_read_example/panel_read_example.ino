@@ -31,6 +31,10 @@ void loop() {
     Serial.print(myPanel.decayKnob.getState());
     Serial.print(myPanel.sustainKnob.getState());
     Serial.print(myPanel.releaseKnob.getState());
+    
+    myPanel.redLed.setState(myPanel.reg1.getState());
+    myPanel.greenLed.setState(myPanel.load.getState());
+    
     Serial.println();
   }
   

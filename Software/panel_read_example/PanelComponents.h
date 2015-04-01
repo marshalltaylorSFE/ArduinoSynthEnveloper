@@ -52,6 +52,18 @@ private:
   PanelSwitch switchBit2;
 };
 
+//---Switch------------------------------------------------------
+class PanelLed
+{
+public:
+  PanelLed( void );
+  void init( uint8_t );
+  void setState( uint8_t );
+  uint8_t pinNumber;
+protected:
+private:
+};
+
 #endif // PANELCOMPONENTS_H
 
 

@@ -16,6 +16,8 @@ public:
   PanelKnob8Bit sustainKnob;
   PanelKnob8Bit releaseKnob;
   PanelRegister reg1;
+  PanelLed redLed;
+  PanelLed greenLed;
 
 protected:
 private:
