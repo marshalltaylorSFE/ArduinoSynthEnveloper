@@ -19,6 +19,7 @@ Envelope myEnvelope;
 MIDI_CREATE_DEFAULT_INSTANCE();
 
 // -----------------------------------------------------------------------------
+//
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
