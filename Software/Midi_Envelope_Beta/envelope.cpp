@@ -1,6 +1,7 @@
 #include "envelope.h"
 //#include <Arduino.h>
 
+
 Envelope::Envelope( void )
 {
   //Init variables

@@ -18,6 +18,7 @@ void setup() {
   
 }
 
+uint8_t i = 0;
 // the loop routine runs over and over again forever:
 void loop() {
   myPanel.update();
@@ -32,14 +33,18 @@ void loop() {
     Serial.print(myPanel.sustainKnob.getState());
     Serial.print(myPanel.releaseKnob.getState());
     
-    myPanel.redLed.setState(myPanel.reg1.getState());
-    myPanel.greenLed.setState(myPanel.load.getState());
+    //myPanel.redLed.setState(myPanel.reg1.getState());
+    myPanel.redLed.setState(myPanel.load.getState());
     
     Serial.println();
+
   }
+
+  i++;
+  myPanel.greenLed.setPWM(i);
   
 
-  delay(1);        // delay in between reads for stability
+  delay(10);        // delay in between reads for stability
 }
 
 
