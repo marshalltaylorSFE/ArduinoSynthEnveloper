@@ -15,6 +15,7 @@ public:
   PanelKnob8Bit decayKnob;
   PanelKnob8Bit sustainKnob;
   PanelKnob8Bit releaseKnob;
+  PanelKnob8Bit masterKnob;
   PanelRegister reg1;
   PanelLed redLed;
   PanelLed greenLed;

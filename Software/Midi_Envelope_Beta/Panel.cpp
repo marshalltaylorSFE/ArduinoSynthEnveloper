@@ -8,6 +8,7 @@
 #define decayKnobPin 1
 #define sustainKnobPin 2
 #define releaseKnobPin 3
+#define masterKnobPin 4
 #define greenLedPin 6
 #define redLedPin 7
 
@@ -23,6 +24,7 @@ void Panel::init( void )
   decayKnob.init( decayKnobPin );
   sustainKnob.init( sustainKnobPin );
   releaseKnob.init( releaseKnobPin );
+  masterKnob.init( masterKnobPin );
   reg1.init( regBit2Pin, regBit1Pin, regBit0Pin );
   greenLed.init( greenLedPin );
   redLed.init( redLedPin );
@@ -36,6 +38,7 @@ void Panel::update( void )
   decayKnob.update();
   sustainKnob.update();
   releaseKnob.update();
+  masterKnob.update();
   reg1.update();
   
 }

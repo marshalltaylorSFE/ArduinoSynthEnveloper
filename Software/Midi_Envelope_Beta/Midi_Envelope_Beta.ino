@@ -1,6 +1,8 @@
 #include <MIDI.h>
 #include "envelope.h"
 #include "Panel.h"
+#include "timerModule.h"
+#include "stdint.h"
 
 //Global Panel object
 Panel myPanel;
@@ -8,10 +10,22 @@ Panel myPanel;
 //Global Envelope object(s)
 Envelope myEnvelope;
 
+#define ENVTICKRATEMS 2
 
-//tick variable
-long ms_ticks = 0;
 uint8_t last_amp_sent = 0;
+
+
+//Global timer object(s)
+TimerClass envelopeTimer( ENVTICKRATEMS );
+TimerClass idleTimer( 333 );
+TimerClass panelTimer( 50 );
+
+#define MAXINTERVAL 2000
+
+uint16_t msTicks = 0;
+uint8_t msTicksMutex = 1; //start locked out
+
+
 
 
 MIDI_CREATE_DEFAULT_INSTANCE();
@@ -21,7 +35,7 @@ MIDI_CREATE_DEFAULT_INSTANCE();
 
 void handleNoteOn(byte channel, byte pitch, byte velocity)
 {
-  myPanel.redLed.setState(1);
+  //myPanel.redLed.setState(1);
   myEnvelope.setNoteOn();
   // Do whatever you want when a note is pressed.
   MIDI.sendNoteOn(pitch, 20, channel);
@@ -30,7 +44,7 @@ void handleNoteOn(byte channel, byte pitch, byte velocity)
 
 void handleNoteOff(byte channel, byte pitch, byte velocity)
 {
-  myPanel.redLed.setState(0);
+  //myPanel.redLed.setState(0);
   myEnvelope.setNoteOff();
   // Do something when the note is released.
   // Note that NoteOn messages with 0 velocity are interpreted as NoteOffs.
@@ -45,11 +59,13 @@ void setup()
   //Required to init panel object
   myPanel.init();
   
-  //Default settings  
-  myEnvelope.setAttack(.25);
-  myEnvelope.setDecay(.8);
-  myEnvelope.setSustain(75);
-  myEnvelope.setRelease(2);
+  pinMode(13, OUTPUT);
+  
+  //Default settings
+  myEnvelope.setSustain( 127 );
+  myEnvelope.setAttack( 255, -60 );
+  myEnvelope.setDecay( 255, 60 );
+  myEnvelope.setRelease( 255, 60 );
   
   // Connect the handleNoteOn function to the library,
   // so it is called upon reception of a NoteOn.
@@ -68,13 +84,13 @@ void setup()
   TCCR1B = 0;     // same for TCCR1B
 
   // set compare match register to desired timer count:
-  OCR1A = 1250;
+  OCR1A = 16000;
 
   // turn on CTC mode:
   TCCR1B |= (1 << WGM12);
 
-  // Set CS
-  TCCR1B |= (1 << CS11) | (1 << CS10);  // /64
+  // Set CS10 and CS12 bits for 1 prescaler:
+  TCCR1B |= (1 << CS10);
 
 
   // enable timer compare interrupt:
@@ -86,62 +102,120 @@ void setup()
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
   MIDI.turnThruOff();
+  //Serial.begin(9600);
 }
 
 void loop()
 {
+  uint16_t inputVarTemp = 0;
+  int16_t inputPowTemp = 0;
+  
+  if( msTicksMutex == 0 )  //Only touch the timers if clear to do so.
+  {
+    envelopeTimer.update(msTicks);
+    idleTimer.update(msTicks);
+    panelTimer.update(msTicks);
+
+    //Done?  Lock it back up
+    msTicksMutex = 1;
+  }  //The ISR should clear the mutex.
+  
+
+  //Run the outputs here
+  if(envelopeTimer.flagStatus() == PENDING)
+  {
+    myEnvelope.tick( ENVTICKRATEMS );
+    MIDI.sendControlChange(7, myEnvelope.amp >> 1, 1);
+    last_amp_sent = myEnvelope.amp;
+    myPanel.greenLed.setPWM(255-last_amp_sent);
+
+  }
+
+  //Tick the panel
+  if(panelTimer.flagStatus() == PENDING)
+  {
+    // Call to update the panel wheneve
+    myPanel.update();
+  }
+  
+  //Debug loop
+  if(idleTimer.flagStatus() == PENDING)
+  {
+    digitalWrite( 13, digitalRead(13) ^ 1 );
+    //Serial.print(myEnvelope.state);
+    //Serial.println(myEnvelope.amp);
+  }
+
   // Call MIDI.read the fastest you can for real-time performance.
   MIDI.read();
   
-  // Call to update the panel wheneve
-  myPanel.update();
-
   // See if anything changed
   if( myPanel.load.newData == 1 )
   {
+    if( myPanel.load.getState() == 1 )
+    {
+      myEnvelope.setNoteOn();
+            
+    }
+    else
+    {
+      myEnvelope.setNoteOff();
+    }
+  
   }
   
   if( myPanel.reg1.newData == 1 )
   {
+    myPanel.reg1.getState();
+    myPanel.redLed.setState(0);
   }
   
-  if( myPanel.attackKnob.newData == 1 )
+  inputPowTemp = myPanel.masterKnob.getState() - 127;
+  
+  if ( myPanel.attackKnob.newData == 1 )
   {
-    myEnvelope.setAttack(((float)myPanel.attackKnob.getState()) * 0.5);
+    inputVarTemp = myPanel.attackKnob.getState();
+    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    myEnvelope.setAttack(inputVarTemp, inputPowTemp);
   }
-  
-  if( myPanel.decayKnob.newData == 1 )
+
+  if ( myPanel.decayKnob.newData == 1 )
   {
-    myEnvelope.setDecay(((float)myPanel.decayKnob.getState()/256) * 0.5);
+    inputVarTemp = myPanel.decayKnob.getState();
+    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    myEnvelope.setDecay(inputVarTemp, inputPowTemp);
   }
-  
-  if( myPanel.sustainKnob.newData == 1 )
+
+  if ( myPanel.sustainKnob.newData == 1 )
   {
-    myEnvelope.setSustain(myPanel.sustainKnob.getState() >> 1);
+    inputVarTemp = myPanel.sustainKnob.getState();
+    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    myEnvelope.setSustain(inputVarTemp);
+    
   }
-  
-  if( myPanel.releaseKnob.newData == 1 )
+
+  if ( myPanel.releaseKnob.newData == 1 )
   {
-    myEnvelope.setDecay(((float)myPanel.releaseKnob.getState()/256) * 2);
+    inputVarTemp = myPanel.releaseKnob.getState();
+    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    myEnvelope.setRelease(inputVarTemp, inputPowTemp);
   }
   
-  // main program
-//  if( ms_ticks > 200 )
-//  {
-//    ms_ticks = ms_ticks - 200;
-//    // Toggle LED
-//    myPanel.greenLed.setState( myPanel.greenLed.getState() ^ 1 );
-//  }
 }
+
 
 ISR(TIMER1_COMPA_vect)
 {
-  ms_ticks++;
-  myEnvelope.tick();
-  if( myEnvelope.amp != last_amp_sent )
+  uint32_t returnVar = 0;
+  if(msTicks >= ( MAXTIMER + MAXINTERVAL ))
   {
-    MIDI.sendControlChange(7, myEnvelope.amp, 1);
-    last_amp_sent = myEnvelope.amp;
-    myPanel.greenLed.setPWM(last_amp_sent);
+    returnVar = msTicks - MAXTIMER;
+
   }
+  else
+  {
+    returnVar = msTicks + 1;
+  }
+  msTicks = returnVar;
+  msTicksMutex = 0;  //unlock
 }
