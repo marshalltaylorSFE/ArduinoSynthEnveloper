@@ -9,8 +9,9 @@ Panel myPanel;
 
 //Global Envelope object(s)
 Envelope myEnvelope;
+Envelope myEnvelopeShadow;
 
-#define ENVTICKRATEMS 2
+#define ENVTICKRATEMS 5
 
 uint8_t last_amp_sent = 0;
 
@@ -125,6 +126,7 @@ void loop()
   if(envelopeTimer.flagStatus() == PENDING)
   {
     myEnvelope.tick( ENVTICKRATEMS );
+    myEnvelopeShadow.tick( ENVTICKRATEMS );
     MIDI.sendControlChange(7, myEnvelope.amp >> 1, 1);
     last_amp_sent = myEnvelope.amp;
     myPanel.greenLed.setPWM(255-last_amp_sent);
