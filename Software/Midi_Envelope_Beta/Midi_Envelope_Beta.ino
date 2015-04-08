@@ -191,7 +191,7 @@ void loop()
   if ( myPanel.sustainKnob.newData == 1 )
   {
     inputVarTemp = myPanel.sustainKnob.getState();
-    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    //Allow sustain of zero
     myEnvelope.setSustain(inputVarTemp);
     
   }

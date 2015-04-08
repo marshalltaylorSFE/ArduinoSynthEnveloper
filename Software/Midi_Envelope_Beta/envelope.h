@@ -34,13 +34,10 @@ class RateParameter
 public:
   //Constructor
   RateParameter( void );
-
-  //Variables
+//Variables
   uint16_t timeScale;
   int8_t powerScale;
-  //uint8_t maxAmp;
-  //uint8_t refValue;
-  //int8_t dir; // 1 or -1
+
 
 };
 
@@ -82,7 +79,7 @@ public:
   void setDecay( uint8_t, int8_t );
   void setSustain( uint8_t );
   void setRelease( uint8_t, int8_t );
-  void setState( uint8_t );
+  //void setState( uint8_t );
 
   //RateParameter getAttack( void );
   //RateParameter getDecay( void );
@@ -90,24 +87,29 @@ public:
 
   //Variables
   uint8_t amp;
-  void changeAmp( uint8_t );
+  uint8_t shadowAmp;
+private:
 
-//private:
   //Methods
-  //void changeAmp( RateParameter &, uint16_t );
-  void changeAmp( RateParameter &, uint16_t, uint8_t );
-  void changeAmp( LevelParameter & );
+  void changeAmp( RateParameter&, uint16_t, uint8_t, uint8_t& );
+  void changeAmp( LevelParameter&, uint8_t& );
+  void changeAmp( uint8_t, uint8_t& );
 
   //Variables
   uint8_t state;
   uint8_t noteState;
-  //Something to do with time tracking...  time since state entry?
-  TimeKeeper mainTK;
+
+  //Timekeepers are modified logical counter modules
+  TimeKeeper mainTimeKeeper;
+  TimeKeeper shadowTimeKeeper;
 
   RateParameter envAttack;
+  //RateParameter envAttackShadow;
   RateParameter envDecay;
+  //RateParameter envDecayShadow;
   LevelParameter envSustain;
   RateParameter envRelease;
+  //RateParameter envReleaseShadow;
 
 };
 
