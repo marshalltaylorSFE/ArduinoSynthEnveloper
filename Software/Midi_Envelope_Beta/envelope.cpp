@@ -50,7 +50,7 @@ void Envelope::tick( uint8_t msElapsed )
         //Increment amp or leave
         if( amp == 255 )
         {
-            next_state = SM_DECAY;
+            next_state = SM_ATTACK_HOLD;
             mainTimeKeeper.mClear();
         }
         else if( noteState == NOTE_OFF )
@@ -92,12 +92,23 @@ void Envelope::tick( uint8_t msElapsed )
         changeAmp( envDecay, shadowTimeKeeper.mGet(), SM_DECAY, shadowAmp );
         if( shadowAmp <= amp ) //It's time to move
         {
+            //Change to the shadowAmp
             next_state = SM_DECAY;
             mainTimeKeeper = shadowTimeKeeper;
+            changeAmp( envDecay, mainTimeKeeper.mGet(), SM_DECAY, amp);
+        }
+        break;
+    case SM_ATTACK_HOLD:
+        //Increment amp or leave
+        if( mainTimeKeeper.mGet() > envAttackHold.timeScale )
+        {
+            next_state = SM_DECAY;
+            mainTimeKeeper.mClear();
         }
         break;
     case SM_DECAY:
-        if( amp > envSustain.level )  //Always get to sustain level before advancing
+        //if( amp > envSustain.level )  //Always get to sustain level before advancing
+        if( mainTimeKeeper.mGet() < getDecay() )  //Always get to sustain level before advancing
         {
             changeAmp( envDecay, mainTimeKeeper.mGet(), state, amp );
         }
@@ -113,7 +124,7 @@ void Envelope::tick( uint8_t msElapsed )
             next_state = SM_POST_DECAY;
 
         }
-        else if( (noteState == NOTE_OFF)&&( amp <= envSustain.level ))
+        else if( (noteState == NOTE_OFF)&&( mainTimeKeeper.mGet() > getDecay() ))
         {
             mainTimeKeeper.mClear();
             next_state = SM_RELEASE;
@@ -121,14 +132,14 @@ void Envelope::tick( uint8_t msElapsed )
         break;
     case SM_POST_DECAY:
         //Decay the main until sustain
-        if( amp > envSustain.level )
+        if( mainTimeKeeper.mGet() < getDecay() )
         {
             changeAmp( envDecay, mainTimeKeeper.mGet(), state, amp );
         }
         // else do nothing
         //Attack the shadow
         changeAmp( envAttack, shadowTimeKeeper.mGet(), SM_ATTACK, shadowAmp );
-        if( shadowAmp > amp ) //It's time to move
+        if( shadowAmp >= amp ) //It's time to move
         {
             next_state = SM_ATTACK;
             //Now, copy the shadow to the main
@@ -142,8 +153,10 @@ void Envelope::tick( uint8_t msElapsed )
         changeAmp( envRelease, shadowTimeKeeper.mGet(), SM_RELEASE, shadowAmp );
         if( shadowAmp < amp ) //It's time to move
         {
+            //change to shadowAmp
             next_state = SM_RELEASE;
             mainTimeKeeper = shadowTimeKeeper;
+            changeAmp( envRelease, mainTimeKeeper.mGet(), SM_RELEASE, amp );
         }
         break;
     case SM_RELEASE:
@@ -156,8 +169,9 @@ void Envelope::tick( uint8_t msElapsed )
             next_state = SM_POST_RELEASE;
 
         }
-        else
+        else  //it does equal note off
         {
+            //if( mainTimeKeeper.mGet() < getDecay() )
             if( amp > 0 )
             {
                 changeAmp( envRelease, mainTimeKeeper.mGet(), state, amp );
@@ -165,19 +179,29 @@ void Envelope::tick( uint8_t msElapsed )
         }
         break;
     case SM_POST_RELEASE:
-        //Keep decaying the main
-        if( amp > 0 )
+        if( noteState == NOTE_OFF )
         {
-            changeAmp( envRelease, mainTimeKeeper.mGet(), state, amp );
-        }
-        //Start attacking the shadow
-        changeAmp( envAttack, shadowTimeKeeper.mGet(), SM_ATTACK, shadowAmp );
-        if( shadowAmp > amp ) //It's time to move
-        {
-            next_state = SM_ATTACK;
-            //Now, copy the shadow to the main
+            //go back to the release
+            next_state = SM_RELEASE;
+            //put the shadow away
 
-            mainTimeKeeper = shadowTimeKeeper;
+        }
+        //Keep decaying the main
+        else
+        {
+            if( amp > 0 )
+            {
+                changeAmp( envRelease, mainTimeKeeper.mGet(), state, amp );
+            }
+            //Start attacking the shadow
+            changeAmp( envAttack, shadowTimeKeeper.mGet(), SM_ATTACK, shadowAmp );
+            if( shadowAmp > amp ) //It's time to move
+            {
+                next_state = SM_ATTACK;
+                //Now, copy the shadow to the main
+
+                mainTimeKeeper = shadowTimeKeeper;
+            }
         }
         break;
     default:
@@ -235,6 +259,8 @@ void Envelope::changeAmp( RateParameter& param, uint16_t timeVar, uint8_t stateV
     }
 
     ampVar = (refLevel + ( polarity * ampTemp ));
+
+
 }
 
 void Envelope::changeAmp( LevelParameter& param, uint8_t& ampVar )
@@ -271,17 +297,28 @@ void Envelope::setNoteOff()
 
 void Envelope::setAttack( uint8_t var_attack, int8_t var_power )
 {
-    //Scale 0-255 input parameters to the appropriate phase range in ms
-    envAttack.timeScale = (((uint32_t)var_attack * 1000) >> 8);
+    //Scale 1-255 input parameters to the appropriate phase range in ms
+    if( var_attack > 0 )
+    {
+      envAttack.timeScale = (((uint32_t)var_attack * MAX_ATTACK_MS) >> 8);
+    }
     envAttack.powerScale = var_power;
 
 }
 
 void Envelope::setDecay( uint8_t var_decay, int8_t var_power )
 {
-    envDecay.timeScale = (((uint32_t)var_decay * 1000) >> 8);
+    if( var_decay > 0 )
+    {
+      envDecay.timeScale = (((uint32_t)var_decay * MAX_DECAY_MS) >> 8);
+    }
     envDecay.powerScale = var_power;
 
+}
+
+uint16_t Envelope::getDecay( void )
+{
+  return envDecay.timeScale;
 }
 
 void Envelope::setSustain( uint8_t var_sustain )
@@ -292,17 +329,25 @@ void Envelope::setSustain( uint8_t var_sustain )
 
 uint8_t LevelParameter::getLevel( void )
 {
-  return level;
+    return level;
 
 }
 
 void Envelope::setRelease( uint8_t var_release, int8_t var_power )
 {
-    envRelease.timeScale = (((uint32_t)var_release * 5000) >> 8);
+    if( var_release > 0 )
+    {
+      envRelease.timeScale = (((uint32_t)var_release * MAX_RELEASE_MS) >> 8);
+    }
     envRelease.powerScale = var_power;
 
 }
 
+void Envelope::setAttackHold( uint8_t var_attackHold )
+{
+    envAttackHold.timeScale = (((uint32_t)var_attackHold * 25) >> 8);
+
+}
 RateParameter::RateParameter( void )
 {
     //Constructor

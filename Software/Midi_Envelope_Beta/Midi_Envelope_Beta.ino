@@ -172,19 +172,19 @@ void loop()
     myPanel.redLed.setState(0);
   }
   
-  inputPowTemp = myPanel.masterKnob.getState() - 127;
+  inputPowTemp = myPanel.masterKnob.getState() - 128;
   
   if ( myPanel.attackKnob.newData == 1 )
   {
     inputVarTemp = myPanel.attackKnob.getState();
-    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    //if( inputVarTemp < 1 ) inputVarTemp = 1;
     myEnvelope.setAttack(inputVarTemp, inputPowTemp);
   }
 
   if ( myPanel.decayKnob.newData == 1 )
   {
     inputVarTemp = myPanel.decayKnob.getState();
-    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    //if( inputVarTemp < 1 ) inputVarTemp = 1;
     myEnvelope.setDecay(inputVarTemp, inputPowTemp);
   }
 
@@ -199,7 +199,7 @@ void loop()
   if ( myPanel.releaseKnob.newData == 1 )
   {
     inputVarTemp = myPanel.releaseKnob.getState();
-    if( inputVarTemp < 10 ) inputVarTemp = 10;
+    //if( inputVarTemp < 1 ) inputVarTemp = 1;
     myEnvelope.setRelease(inputVarTemp, inputPowTemp);
   }
   

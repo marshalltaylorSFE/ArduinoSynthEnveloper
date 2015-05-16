@@ -23,11 +23,17 @@
 #define SM_PRE_RELEASE 5
 #define SM_RELEASE 6
 #define SM_POST_RELEASE 7
+#define SM_ATTACK_HOLD 8
 
 //Note states
 #define NOTE_OFF 0
 #define NOTE_ON 1
 #define NOTE_NEW 2
+
+//Knob range scaling
+#define MAX_ATTACK_MS 1000
+#define MAX_DECAY_MS 1000
+#define MAX_RELEASE_MS 5000
 
 class RateParameter
 {
@@ -77,8 +83,10 @@ public:
   void setNoteOff( void );
   void setAttack( uint8_t, int8_t );
   void setDecay( uint8_t, int8_t );
+  uint16_t getDecay( void );
   void setSustain( uint8_t );
   void setRelease( uint8_t, int8_t );
+  void setAttackHold( uint8_t );
   //void setState( uint8_t );
 
   //RateParameter getAttack( void );
@@ -97,8 +105,9 @@ private:
 
   //Variables
   uint8_t state;
+public:
   uint8_t noteState;
-
+private:
   //Timekeepers are modified logical counter modules
   TimeKeeper mainTimeKeeper;
   TimeKeeper shadowTimeKeeper;
@@ -110,6 +119,8 @@ private:
   LevelParameter envSustain;
   RateParameter envRelease;
   //RateParameter envReleaseShadow;
+public:
+  RateParameter envAttackHold;
 
 };
 
